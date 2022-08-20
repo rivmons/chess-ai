@@ -49,9 +49,8 @@ def genPieces():
 
 def main():
 
-    cboard = Board()
-    board = cboard.board
-    whiteToMove = cboard.whiteToMove
+    gs = Board()
+    board = gs.board
 
     pygame.init()
     clock = pygame.time.Clock()
@@ -73,31 +72,31 @@ def main():
             if e.type == pygame.MOUSEBUTTONDOWN:
                 y, x = [i//dimension for i in pygame.mouse.get_pos()]
                 if board[x][y] != '':
-                    if whiteToMove and board[x][y][0] == 'w':
+                    if gs.whiteToMove and board[x][y][0] == 'w':
                         drag = True
                         piece = [x, y]
                         pass
-                    elif not whiteToMove and board[x][y][0] == 'b':
+                    elif not gs.whiteToMove and board[x][y][0] == 'b':
                         drag = True
                         piece = [x, y]
                         pass
             elif e.type == pygame.MOUSEBUTTONUP:
                 if drag:
                     y, x = [i//dimension for i in pygame.mouse.get_pos()]
-
-                    move = Move((piece[1], piece[0]), (y, x), board[piece[0]][piece[1]])
-                    # validMoves = cboard.getValidMoves()
-
-                    # cboard.log.append((board[piece[0]][piece[1]], move.notation()[0], move.notation()[1]))
+                    move = Move((piece[0], piece[1]), (x, y), board)
+                    validMoves = gs.getValidMoves()
+                    print(move.sRow, move.sCol, move.eRow, move.eCol, move.piece, move.captured, move.id)
+                    if move in validMoves:
+                        print('true')
+                        board[x][y], board[piece[0]][piece[1]] = board[piece[0]][piece[1]], ''                    
+                        gs.whiteToMove = not gs.whiteToMove
+                        gs.log.append((board[piece[0]][piece[1]], move.notation()[0], move.notation()[1]))
+                    piece = []
+                    drag = False
+                    drawBoard(board, None, None, None)
 
                     # validate captures with class method
                     # log moves, Move class?
-                    board[x][y], board[piece[0]][piece[1]] = board[piece[0]][piece[1]], board[x][y]                    
-
-                    piece = []
-                    drag = False
-                    whiteToMove = not whiteToMove
-                    drawBoard(board, None, None, None)
 
         if drag:
             drawBoard(board, piece, posX - 20, posY - 20)
