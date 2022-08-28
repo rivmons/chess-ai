@@ -85,9 +85,10 @@ def main():
                     y, x = [i//dimension for i in pygame.mouse.get_pos()]
                     move = Move((piece[0], piece[1]), (x, y), board)
                     validMoves = gs.getValidMoves()
-                    print(move.sRow, move.sCol, move.eRow, move.eCol, move.piece, move.captured, move.id)
+                    print(move)
                     if move in validMoves:
-                        print('true')
+                        if (move.piece == "wp" and move.eRow == 0) or (move.piece == "bp" and move.eRow == 7):
+                            board[piece[0]][piece[1]] = f'{move.piece[0]}Q'
                         board[x][y], board[piece[0]][piece[1]] = board[piece[0]][piece[1]], ''                    
                         gs.whiteToMove = not gs.whiteToMove
                         gs.log.append((board[piece[0]][piece[1]], move.notation()[0], move.notation()[1]))
