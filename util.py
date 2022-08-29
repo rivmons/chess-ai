@@ -1,3 +1,6 @@
+from os import dup
+
+
 class Board:
     def __init__(self):
         self.board = [
@@ -10,8 +13,13 @@ class Board:
             ['wp', 'wp', 'wp', 'wp', 'wp', 'wp', 'wp', 'wp'],
             ['wR', 'wN', 'wB', 'wQ', 'wK', 'wB', 'wN', 'wR']
         ]
+        self.checkmate = False
+        self.stalemate = False
         self.whiteToMove = True
+        self.promotions = []
         self.log = []
+        self.wK = (7, 4)
+        self.bK = (0, 4)
 
     def validPawn(self, x, y, moves):
         if self.whiteToMove:
@@ -53,8 +61,11 @@ class Board:
                     if dx < 8 and dx >= 0 and dy >= 0 and dy < 8:
                         if self.board[dx][dy] == '' or self.board[dx][dy][0] != piece:
                             moves.append(Move((x, y), (dx, dy), self.board))
+                            if self.board[dx][dy] != '':
+                                lockEdge[(i, j)] = True
                             continue
-                        lockEdge[(i, j)] = True
+                        else:
+                            lockEdge[(i, j)] = True
         return moves
 
     def validRook(self, x, y, moves):
@@ -112,13 +123,33 @@ class Board:
         self.validRook(x, y, moves)
 
     def quiescenceCheck(self, move, moves):
-        pass
+        self.move(move)
+        self.whiteToMove = not self.whiteToMove
+        if self.attacked():
+            moves.remove(move)
+        self.whiteToMove = not self.whiteToMove
+        self.undo()
 
-    def getValidMoves(self):
+    def attacked(self):
+        x, y = 0, 0
+        if self.whiteToMove:
+            x, y = self.wK[0], self.wK[1]
+        else:
+            x, y = self.bK[0], self.bK[1]
+        self.whiteToMove = not self.whiteToMove
+        altMoves = self.getValidMoves(False)
+        self.whiteToMove = not self.whiteToMove
+        for move in altMoves:
+            if move.eRow == x and move.eCol == y:
+                return True
+        return False
+
+    def getValidMoves(self, eval):
         validMoves = []
+        piece = "w" if self.whiteToMove else "b"
         for i in range(8):
             for j in range(8):
-                if self.board[i][j] != '':
+                if self.board[i][j] != '' and self.board[i][j][0] == piece:
                     if self.board[i][j][1] == 'p':
                         self.validPawn(i, j, validMoves)
                     if self.board[i][j][1] == 'R':
@@ -131,10 +162,36 @@ class Board:
                         self.validKing(i, j, validMoves)
                     if self.board[i][j][1] == 'Q':
                         self.validQueen(i, j, validMoves)
-
-        # for move in validMoves:
-        #     self.quiescenceCheck(move, validMoves)
+        if eval:
+            for n in range(len(validMoves) - 1, -1, -1):
+                self.quiescenceCheck(validMoves[n], validMoves)
         return validMoves
+
+    def move(self, move):
+        promoted = False
+        if (move.piece == "wp" and move.eRow == 0) or (move.piece == "bp" and move.eRow == 7):
+            self.board[move.sRow][move.sCol] = f'{move.piece[0]}Q'
+            self.promotions.append(move)
+            promoted = True
+        if move.piece[1] == "K":
+            if self.whiteToMove: self.wK = (move.eRow, move.eCol)
+            else: self.bK = (move.eRow, move.eCol)
+        self.board[move.eRow][move.eCol], self.board[move.sRow][move.sCol] = self.board[move.sRow][move.sCol], ''                    
+        self.whiteToMove = not self.whiteToMove
+        self.log.append(move)
+        print(move)
+        return {"promoted": promoted}
+
+    def undo(self):
+        if len(self.log) > 0:
+            move = self.log.pop()
+            self.board[move.sRow][move.sCol], self.board[move.eRow][move.eCol] = move.piece, move.captured
+            self.whiteToMove = not self.whiteToMove
+            if move in self.promotions:
+                pass
+            if move.piece[1] == "K":
+                if self.whiteToMove: self.wK = (move.sRow, move.sCol)
+                else: self.bK = (move.sRow, move.sCol)
                     
 
 class Move:
@@ -148,7 +205,7 @@ class Move:
         self.id = f'{self.sRow + self.sCol * 1000}{self.piece}{self.captured}{self.eRow + self.eCol * 10}'
 
     def __str__(self):
-        return f'{self.piece}: {self.notation()}'
+        return f'{self.piece}: {self.notation()[0]}{self.notation()[1]}'
 
     def __repr__(self):
         return self.__str__()
@@ -160,5 +217,5 @@ class Move:
 
     def notation(self):
         ranks = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
-        return (f'{ranks[self.sRow]}{str(8-int(self.sCol))}', 
-                f'{ranks[self.eRow]}{str(8-int(self.eCol))}')
+        return (f'{ranks[self.sCol]}{str(8-int(self.sRow))}', 
+                f'{ranks[self.eCol]}{str(8-int(self.eRow))}')
