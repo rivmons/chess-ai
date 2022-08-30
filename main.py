@@ -88,11 +88,14 @@ def main():
                 if drag:
                     y, x = [i//dimension for i in pygame.mouse.get_pos()]
                     move = Move((piece[0], piece[1]), (x, y), board)
-                    validMoves = gs.getValidMoves(True)
-                    if move in validMoves: 
-                        val = gs.move(move)
-                        if val["promoted"] == True: 
-                            drawBoard(board, None, None, None)
+                    if piece != [move.eRow, move.eCol]:
+                        validMoves = gs.getValidMoves(True)
+                        for i in range(len(validMoves) - 1):
+                            if move == validMoves[i]:
+                                val = gs.move(validMoves[i])
+                                print(validMoves[i].epPossible)
+                                if val["promoted"] == True: 
+                                    drawBoard(board, None, None, None)
                     piece = []
                     drag = False
                     drawBoard(board, None, None, None)

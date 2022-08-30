@@ -1,6 +1,3 @@
-from os import dup
-
-
 class Board:
     def __init__(self):
         self.board = [
@@ -16,30 +13,40 @@ class Board:
         self.checkmate = False
         self.stalemate = False
         self.whiteToMove = True
-        self.promotions = []
         self.log = []
         self.wK = (7, 4)
         self.bK = (0, 4)
 
     def validPawn(self, x, y, moves):
+        enPassant = False
+        if len(self.log) > 0:
+            enPassant = self.log[-1].epPossible
         if self.whiteToMove:
             if self.board[x - 1][y] == '':
                 moves.append(Move((x, y), (x - 1, y), self.board))
                 if x == 6 and self.board[x - 2][y] == '':
-                    moves.append(Move((x, y), (x - 2, y), self.board))
-            if y > 0 and self.board[x - 1][y - 1] != '' and self.board[x - 1][y - 1][0] == 'b':
+                    moves.append(Move((x, y), (x - 2, y), self.board, epPossible=(x - 1, y)))
+            if y > 0 and self.board[x - 1][y - 1] != '' and self.board[x - 1][y - 1][0] == 'b': # left
                 moves.append(Move((x, y), (x - 1, y - 1), self.board))
-            if y < 7 and self.board[x - 1][y + 1] != '' and self.board[x - 1][y + 1][0] == 'b':
+            if y > 0 and self.board[x - 1][y - 1] == '' and enPassant == (x - 1, y - 1):
+                moves.append(Move((x, y), (x - 1, y - 1), self.board, epMade=True))
+            if y < 7 and self.board[x - 1][y + 1] != '' and self.board[x - 1][y + 1][0] == 'b': # right
                 moves.append(Move((x, y), (x - 1, y + 1), self.board))
+            if y < 7 and self.board[x - 1][y + 1] == '' and enPassant == (x - 1, y + 1):
+                moves.append(Move((x, y), (x - 1, y + 1), self.board, epMade=True))
         else: 
             if self.board[x + 1][y] == '':
                 moves.append(Move((x, y), (x + 1, y), self.board))
                 if x == 1 and self.board[x + 2][y] == '':
-                    moves.append(Move((x, y), (x + 2, y), self.board))
-            if y > 0 and self.board[x + 1][y - 1] != '' and self.board[x + 1][y - 1][0] == 'w':
+                    moves.append(Move((x, y), (x + 2, y), self.board, epPossible=(x + 1, y)))
+            if y > 0 and self.board[x + 1][y - 1] != '' and self.board[x + 1][y - 1][0] == 'w': # left
                 moves.append(Move((x, y), (x + 1, y - 1), self.board))
-            if y < 7 and self.board[x + 1][y + 1] != '' and self.board[x + 1][y + 1][0] == 'w':
+            if y > 0 and self.board[x + 1][y - 1] == '' and enPassant == (x + 1, y - 1):
+                moves.append(Move((x, y), (x + 1, y - 1), self.board, epMade=True))
+            if y < 7 and self.board[x + 1][y + 1] != '' and self.board[x + 1][y + 1][0] == 'w': # right
                 moves.append(Move((x, y), (x + 1, y + 1), self.board))
+            if y < 7 and self.board[x + 1][y + 1] == '' and enPassant == (x + 1, y + 1):
+                moves.append(Move((x, y), (x + 1, y + 1), self.board, epMade=True))
         return moves
     
     def validBishop(self, x, y, moves):
@@ -165,6 +172,12 @@ class Board:
         if eval:
             for n in range(len(validMoves) - 1, -1, -1):
                 self.quiescenceCheck(validMoves[n], validMoves)
+
+        if len(validMoves) == 0:
+            if self.attacked():
+                self.checkmate = True
+            else: self.stalemate = True
+        
         return validMoves
 
     def move(self, move):
@@ -179,7 +192,10 @@ class Board:
         self.board[move.eRow][move.eCol], self.board[move.sRow][move.sCol] = self.board[move.sRow][move.sCol], ''                    
         self.whiteToMove = not self.whiteToMove
         self.log.append(move)
-        print(move)
+
+        if move.epMade:
+            self.board[move.sRow][move.eCol] = ''
+
         return {"promoted": promoted}
 
     def undo(self):
@@ -187,21 +203,26 @@ class Board:
             move = self.log.pop()
             self.board[move.sRow][move.sCol], self.board[move.eRow][move.eCol] = move.piece, move.captured
             self.whiteToMove = not self.whiteToMove
-            if move in self.promotions:
-                pass
+            if move.epMade:
+                type = "b" if self.whiteToMove else "w"
+                self.board[move.sRow][move.eCol] = f'{type}p'
             if move.piece[1] == "K":
                 if self.whiteToMove: self.wK = (move.sRow, move.sCol)
                 else: self.bK = (move.sRow, move.sCol)
+            self.checkmate = False
+            self.stalemate = False
                     
 
 class Move:
-    def __init__(self, start, end, board):
+    def __init__(self, start, end, board, epPossible=(), epMade=False):
         self.sRow = start[0]
         self.sCol = start[1]
         self.eRow = end[0]
         self.eCol = end[1]
         self.piece = board[self.sRow][self.sCol]
         self.captured = board[self.eRow][self.eCol]
+        self.epPossible = epPossible
+        self.epMade = epMade
         self.id = f'{self.sRow + self.sCol * 1000}{self.piece}{self.captured}{self.eRow + self.eCol * 10}'
 
     def __str__(self):
