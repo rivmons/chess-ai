@@ -1,4 +1,3 @@
-from re import T
 import pygame
 import sys
 
@@ -23,6 +22,8 @@ pieceImages = {
 
 screen = pygame.display.set_mode((width, height))
 pygame.display.set_caption('Chess AI')
+pygame.font.init()
+font = pygame.font.SysFont('freesansbold.tf', 40)
 
 def drawBoard(board, piece, x, y):
     sqColors = [pygame.color.Color(232, 235, 239), pygame.color.Color(125, 135, 150)]
@@ -48,6 +49,10 @@ def genPieces():
     for piece in pieceImages:
         pieceImages[piece] = pygame.image.load(f'static/{piece}.png')
 
+def display(text):
+    text = text
+    displayText = True
+
 def main():
 
     gs = Board()
@@ -61,6 +66,7 @@ def main():
     genPieces()
     drawBoard(board, None, None, None)
     piece = []
+    text = ''
 
     while running:
         y, x = [i//dimension for i in pygame.mouse.get_pos()]
@@ -90,19 +96,47 @@ def main():
                     move = Move((piece[0], piece[1]), (x, y), board)
                     if piece != [move.eRow, move.eCol]:
                         validMoves = gs.getValidMoves(True)
-                        for i in range(len(validMoves) - 1):
+                        for i in range(len(validMoves)):
                             if move == validMoves[i]:
                                 val = gs.move(validMoves[i])
-                                print(validMoves[i].epPossible)
+                                print(move)
                                 if val["promoted"] == True: 
                                     drawBoard(board, None, None, None)
+                                if val["castled"] == True:
+                                    drawBoard(board, None, None, None)
+                                if move.piece[1] == "K":
+                                    if move.piece[0] == "w":
+                                        gs.wKCastle = False
+                                    elif move.piece[0] == "b":
+                                        gs.bKCastle = False
+                                if move.piece[1] == "R":
+                                    if move.piece[0] == "w":
+                                        if move.sRow == 7 and move.sCol == 0 and gs.wQSCastle == True:
+                                            gs.wQSCastle = False
+                                        elif move.sRow == 7 and move.sCol == 7 and gs.wKSCastle == True:
+                                            gs.wKSCastle = False
+                                    elif move.piece[0] == "b":
+                                        if x == 1 and y == 0 and gs.bQSCastle == True:
+                                            gs.bQSCastle = False
+                                        elif x == 1 and y == 7 and gs.bKSCastle == True:
+                                            gs.bKSCastle = False
+                                _check = gs.getValidMoves(True)
+                                if gs.checkmate:
+                                    text = f'Game over. {"black" if gs.whiteToMove else "white"} won by checkmate'
+                                if gs.stalemate:
+                                    text = f'Game over. Stalemate.'
                     piece = []
                     drag = False
                     drawBoard(board, None, None, None)
-                    print("-------------------------------------")
 
         if drag:
             drawBoard(board, piece, posX - 20, posY - 20)
+        if text != '':
+            xCoord = 100
+            if len(text) > 4:
+                xCoord = 10
+            textSurface = font.render(text, False, (0, 0, 0))
+            screen.blit(textSurface, (xCoord, height / 2))
             
         pygame.display.flip()
         clock.tick(60)
