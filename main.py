@@ -1,7 +1,9 @@
 import pygame
 import sys
+import random
+import time
 
-from util import Board, Move
+from util import Board, Move, AI
 
 width, height = 512, 512
 dimension = 64
@@ -62,6 +64,9 @@ def main():
     clock = pygame.time.Clock()
     running = True
     drag = False
+    ai = AI(gs)
+    aiToMove = False
+    aiMove = None
 
     genPieces()
     drawBoard(board, None, None, None)
@@ -71,6 +76,20 @@ def main():
     while running:
         y, x = [i//dimension for i in pygame.mouse.get_pos()]
         posX, posY = pygame.mouse.get_pos()
+        if not gs.whiteToMove:
+            aiToMove = True
+            validMoves = gs.getValidMoves(True)
+
+            # create AI class? (or func in board class)
+            # remove stochastic move choice, implement minimax and ab-pruning
+            # look at efficiency of negamax
+            # create structures for all pieces representing points and optimal board positions
+
+            aiMove = ai.move(board, validMoves)
+            time.sleep(1)
+            print(f'AI: {aiMove}')
+            aiToMove = False
+            drawBoard(board, None, None, None)
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 running = False
@@ -80,10 +99,6 @@ def main():
                 y, x = [i//dimension for i in pygame.mouse.get_pos()]
                 if board[x][y] != '':
                     if gs.whiteToMove and board[x][y][0] == 'w':
-                        drag = True
-                        piece = [x, y]
-                        pass
-                    elif not gs.whiteToMove and board[x][y][0] == 'b':
                         drag = True
                         piece = [x, y]
                         pass
@@ -99,7 +114,8 @@ def main():
                         for i in range(len(validMoves)):
                             if move == validMoves[i]:
                                 val = gs.move(validMoves[i])
-                                print(move)
+                                print(f'Player: {move}')
+                                aiToMove = not aiToMove
                                 if val["promoted"] == True: 
                                     drawBoard(board, None, None, None)
                                 if val["castled"] == True:

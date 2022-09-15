@@ -1,3 +1,5 @@
+from math import inf
+
 class Board:
     def __init__(self):
         self.board = [
@@ -255,7 +257,6 @@ class Board:
         castled = False
         if (move.piece == "wp" and move.eRow == 0) or (move.piece == "bp" and move.eRow == 7):
             self.board[move.sRow][move.sCol] = f'{move.piece[0]}Q'
-            self.promotions.append(move)
             promoted = True
         if move.piece[1] == "K":
             if self.whiteToMove: self.wK = (move.eRow, move.eCol)
@@ -333,7 +334,7 @@ class Move:
         self.id = f'{self.sRow + self.sCol * 1000}{self.piece}{self.captured}{self.eRow + self.eCol * 10}'
 
     def __str__(self):
-        return f'{self.piece}: {self.notation()[0]}{self.notation()[1]}'
+        return f'{self.piece} {self.notation()[0]}{self.notation()[1]}'
 
     def __repr__(self):
         return self.__str__()
@@ -346,3 +347,75 @@ class Move:
         ranks = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
         return (f'{ranks[self.sCol]}{str(8-int(self.sRow))}', 
                 f'{ranks[self.eCol]}{str(8-int(self.eRow))}')
+
+class AI:
+
+    def __init__(self, board):
+        self.gs = board
+        self.board = self.gs.board
+        self.checkmate = inf
+        self.stalemate = 0
+        self.scores = {'p': 1, 'N': 5, 'B': 5, 'R': 7, 'K': 0, 'Q': 20}
+        self.nMove = None
+
+    def utility(self):
+        if self.gs.checkmate:
+            if self.gs.whiteToMove:
+                return -self.checkmate
+            else:
+                return self.checkmate
+        if self.gs.stalemate:
+            return self.stalemate
+    
+        pieceScore = 0
+        for i in range(8):
+            for j in range(8):
+                piece = self.board[i][j]
+                if piece != '':
+                    mult = 1 if piece[0] == "w" else -1
+                    pieceScore += (mult * self.scores[piece[1]])
+        return pieceScore
+
+
+    def move(self, board, moves):
+        self.minimax(board, 3, -inf, inf, moves)
+        move = self.nMove
+        self.gs.move(move)
+        self.nMove = None
+        return move     
+
+    def minimax(self, board, depth, alpha, beta, validMoves):
+        if depth == 0:
+            return self.utility()
+
+        if self.gs.whiteToMove:
+            maxSc = -inf
+            for fMove in validMoves:
+                self.gs.move(fMove)
+                fValidMoves = self.gs.getValidMoves(True)
+                score = self.minimax(board, depth - 1, alpha, beta, fValidMoves)
+                if score > maxSc:
+                    maxSc = score
+                    if depth == 3:
+                        self.nMove = fMove
+                self.gs.undo()
+                alpha = max(maxSc, alpha)
+                if alpha >= beta:
+                    break
+            return maxSc
+
+        else:
+            minSc = inf
+            for fMove in validMoves:
+                self.gs.move(fMove)
+                fValidMoves = self.gs.getValidMoves(True)
+                score = self.minimax(board, depth - 1, alpha, beta, fValidMoves)
+                if score < minSc:
+                    minSc = score
+                    if depth == 3:
+                        self.nMove = fMove
+                self.gs.undo()
+                beta = min(minSc, beta)
+                if alpha >= beta:
+                        break
+            return minSc
