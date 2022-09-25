@@ -355,8 +355,60 @@ class AI:
         self.board = self.gs.board
         self.checkmate = inf
         self.stalemate = 0
-        self.scores = {'p': 1, 'N': 5, 'B': 5, 'R': 7, 'K': 0, 'Q': 20}
+        self.scores = {'p': 1, 'N': 3, 'B': 3, 'R': 5, 'K': 0, 'Q': 9}
         self.nMove = None
+        self.depth = 3
+        self.counter = 0
+
+        self.wpPS = [[10, 10, 10, 10, 10, 10, 10, 10],
+                    [7, 8, 8, 8, 8, 8, 8, 7],
+                    [6, 7, 7, 8, 8, 7, 7, 6],
+                    [5, 6, 6, 7, 7, 6, 6, 5],
+                    [4, 4, 5, 5, 5, 5, 5, 4],
+                    [2, 3, 3, 3, 3, 3, 3, 2],
+                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [0, 0, 0, 0, 0, 0, 0, 0]]
+        self.bpPS = [[0, 0, 0, 0, 0, 0, 0, 0],
+                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [2, 2, 2, 2, 2, 2, 2, 2],
+                    [4, 4, 5, 5, 5, 5, 4, 4],
+                    [5, 6, 6, 7, 7, 6, 6, 5],
+                    [6, 7, 7, 8, 8, 7, 7, 6],
+                    [7, 8, 8, 8, 8, 8, 8, 7],
+                    [10, 10, 10, 10, 10, 10, 10, 10]]
+        self.NPS = [[1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 2, 2, 2, 2, 2, 2, 1],
+                    [1, 2, 3, 3, 3, 3, 2, 1],
+                    [1, 2, 3, 4, 4, 3, 2, 1],
+                    [1, 2, 3, 4, 4, 3, 2, 1],
+                    [1, 2, 3, 3, 3, 3, 2, 1],
+                    [1, 2, 2, 2, 2, 2, 2, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1]]
+        self.BPS = [[4, 3, 2, 1, 1, 2, 3, 4],
+                    [3, 4, 3, 2, 2, 3, 4, 3],
+                    [2, 3, 4, 3, 3, 4, 3, 2],
+                    [1, 2, 3, 4, 4, 3, 2, 1],
+                    [1, 2, 3, 4, 4, 3, 2, 1],
+                    [2, 3, 4, 3, 3, 4, 3, 2],
+                    [3, 4, 3, 2, 2, 3, 4, 3],
+                    [4, 3, 2, 1, 1, 2, 3, 4]]
+        self.RPS = [[4, 3, 3, 4, 4, 3, 3, 4],
+                    [2, 4, 3, 3, 3, 3, 4, 2],
+                    [2, 3, 3, 3, 3, 3, 3, 2],
+                    [1, 2, 3, 4, 4, 3, 2, 1],
+                    [1, 2, 3, 4, 4, 3, 2, 1],
+                    [2, 3, 3, 3, 3, 3, 3, 2],
+                    [2, 4, 3, 3, 3, 3, 4, 2],
+                    [4, 3, 3, 4, 4, 3, 3, 4]]
+        self.QPS = [[1, 1, 1, 2, 2, 1, 1, 1],
+                    [1, 2, 3, 3, 3, 3, 2, 1],
+                    [1, 4, 3, 3, 4, 2, 4, 1],
+                    [1, 2, 3, 4, 3, 3, 2, 1],
+                    [1, 2, 3, 3, 4, 3, 2, 1],
+                    [1, 4, 3, 4, 3, 2, 4, 1],
+                    [1, 2, 3, 3, 3, 3, 2, 1],
+                    [1, 1, 1, 2, 2, 1, 1, 1]]
+        self.PScores = {'wp': self.wpPS, 'bp': self.bpPS, 'N': self.NPS, 'B': self.BPS, 'R': self.RPS, 'Q': self.QPS}
 
     def utility(self):
         if self.gs.checkmate:
@@ -371,17 +423,22 @@ class AI:
         for i in range(8):
             for j in range(8):
                 piece = self.board[i][j]
-                if piece != '':
+                if piece != '' and piece[1] != "K":
                     mult = 1 if piece[0] == "w" else -1
-                    pieceScore += (mult * self.scores[piece[1]])
+                    if piece[1] == "p":
+                        pieceScore += (mult * (self.scores[piece[1]] + (self.PScores[piece][i][j] * 0.1)))
+                    else:
+                        pieceScore += (mult * (self.scores[piece[1]] + (self.PScores[piece[1]][i][j] * 0.1)))
         return pieceScore
 
 
     def move(self, board, moves):
-        self.minimax(board, 3, -inf, inf, moves)
+        self.minimax(board, self.depth, -inf, inf, moves)
         move = self.nMove
         self.gs.move(move)
+        print(f'Moves surveyed: {self.counter}')
         self.nMove = None
+        self.counter = 0
         return move     
 
     def minimax(self, board, depth, alpha, beta, validMoves):
@@ -391,12 +448,13 @@ class AI:
         if self.gs.whiteToMove:
             maxSc = -inf
             for fMove in validMoves:
+                self.counter += 1
                 self.gs.move(fMove)
                 fValidMoves = self.gs.getValidMoves(True)
                 score = self.minimax(board, depth - 1, alpha, beta, fValidMoves)
                 if score > maxSc:
                     maxSc = score
-                    if depth == 3:
+                    if depth == self.depth:
                         self.nMove = fMove
                 self.gs.undo()
                 alpha = max(maxSc, alpha)
@@ -407,12 +465,13 @@ class AI:
         else:
             minSc = inf
             for fMove in validMoves:
+                self.counter += 1
                 self.gs.move(fMove)
                 fValidMoves = self.gs.getValidMoves(True)
                 score = self.minimax(board, depth - 1, alpha, beta, fValidMoves)
                 if score < minSc:
                     minSc = score
-                    if depth == 3:
+                    if depth == self.depth:
                         self.nMove = fMove
                 self.gs.undo()
                 beta = min(minSc, beta)

@@ -1,7 +1,5 @@
 import pygame
 import sys
-import random
-import time
 
 from util import Board, Move, AI
 
@@ -80,13 +78,9 @@ def main():
             aiToMove = True
             validMoves = gs.getValidMoves(True)
 
-            # create AI class? (or func in board class)
-            # remove stochastic move choice, implement minimax and ab-pruning
-            # look at efficiency of negamax
             # create structures for all pieces representing points and optimal board positions
 
             aiMove = ai.move(board, validMoves)
-            time.sleep(1)
             print(f'AI: {aiMove}')
             aiToMove = False
             drawBoard(board, None, None, None)
@@ -102,9 +96,12 @@ def main():
                         drag = True
                         piece = [x, y]
                         pass
-            if e.type == pygame.KEYDOWN:
-                gs.undo()
-                drawBoard(board, None, None, None)
+
+            # wont work with current ai functionality; can def another func to undo 2 moves back to player turn
+            # if e.type == pygame.KEYDOWN:
+            #     gs.undo()
+            #     drawBoard(board, None, None, None)
+            
             if e.type == pygame.MOUSEBUTTONUP:
                 if drag:
                     y, x = [i//dimension for i in pygame.mouse.get_pos()]
